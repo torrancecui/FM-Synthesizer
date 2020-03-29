@@ -1,0 +1,3 @@
+# FM Synthesizer Problem Scenario
+
+Musicians and producers today frequently work out of a DAW (Digital Audio Workstation), making frequent use of various plug-ins and effects like drum machines or equalizers respectively. While there are currently a large amount of synthesizer plug-ins to choose from, many of them are closed-source, unintuitive, prohibitively expensive, or simply of poor quality. We aim to create a high quality, open source synthesizer plug-in that will work cross-platform inside any DAW that supports VST. The plug-in should have a comprehensive set of options and settings, so the user can create any sound they want. Equally as important, the synthesizer should have a clear and pleasing presentation that does not overwhelm the user.
