@@ -36,23 +36,19 @@ public:
      @param number : The amount of voices to be added to the PolySynth.
      */
     template<typename T1, typename T2>
-    void addVoice(int number)
-    {
+    void addVoice(int number, AudioProcessorValueTreeState* params)
+    {        
         static_assert(std::is_base_of<SynthesiserVoice, T1>::value,
                       "Second type must derive from the SynthesiserVoice class.");
         static_assert(std::is_base_of<SynthesiserSound, T2>::value,
                              "First type must derive from the SynthesiserSound class.");
         
         for (auto i = 0; i < number; ++i)
-            synth.addVoice (new T1());
+            synth.addVoice (new T1(params, blockSize));
         
         synth.addSound (new T2());
     
     }
-    
-
-   
-    
     
     void clearSounds()
     {
@@ -64,8 +60,9 @@ public:
         synth.clearVoices();
     }
     
-    void prepareToPlay (double sampleRate)
+    void prepareToPlay (double sampleRate, int blockSize)
     {
+        this->blockSize = blockSize;
         synth.setCurrentPlaybackSampleRate (sampleRate);
         midiCollector.reset (sampleRate);
     }
@@ -92,4 +89,5 @@ private:
     MidiKeyboardState& keyboardState;
     MidiMessageCollector midiCollector;
     Synthesiser synth;
+    int blockSize;
 };

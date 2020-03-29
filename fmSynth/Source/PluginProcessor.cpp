@@ -22,21 +22,11 @@ FmSynthAudioProcessor::FmSynthAudioProcessor()
         .withOutput("Output", AudioChannelSet::stereo(), true)
 #endif
     ),
+    valTreeState(*this, nullptr, "PARAMETERS", createParameterLayout()),
     synth(keyboardState)
-#else
-    : synth(keyboardState)
 #endif
 {
-    /**
-     Clear Voice and Sound Buffer for polySynth instance.
-     */
-    synth.clearVoices();
-    synth.clearSounds();
-
-    /**
-     Add the voices found in the SqaureOsc files.
-     */
-    synth.addVoice<SineVoice, SineSound>(12);
+    valTreeState.state = ValueTree("savedParams");
 }
 
 FmSynthAudioProcessor::~FmSynthAudioProcessor()
@@ -44,6 +34,86 @@ FmSynthAudioProcessor::~FmSynthAudioProcessor()
 }
 
 //==============================================================================
+
+AudioProcessorValueTreeState::ParameterLayout FmSynthAudioProcessor::createParameterLayout()
+{
+    // all the parameters should be set here!
+
+    NormalisableRange<float> cutoffRange(0.0, 20000.0, 1.0, .3, false);
+
+    std::vector<std::unique_ptr<RangedAudioParameter>> params;
+    
+    auto gain = std::make_unique<AudioParameterFloat>(GAIN_ID,GAIN_NAME,
+                                                      NormalisableRange<float>(0.0f,1.5f,0.01f,0.75f),1.0f);
+    
+    auto cutoff = std::make_unique<AudioParameterFloat>(FILTER_CUTOFF_ID,FILTER_CUTOFF_NAME,
+                                                      NormalisableRange<float>(30.0f,20000.0f,1.0f,0.2f),20000.0f);
+    
+    auto resonance = std::make_unique<AudioParameterFloat>(FILTER_RES_ID,FILTER_RES_NAME,
+                                                        NormalisableRange<float>(1.0f,15.0f,0.01f,1.0f),1.0f);
+    
+    auto filterSelectType = std::make_unique<AudioParameterInt>(FILTER_TYPE_ID, FILTER_TYPE_NAME, 1, 5, 1);
+    
+    auto carrierWave = std::make_unique<AudioParameterInt>(CARRIER_WAVE_ID, CARRIER_WAVE_NAME, 1, 5, 1);
+    
+    auto carrierOctave = std::make_unique<AudioParameterInt>(OCTAVE_ID, OCTAVE_NAME, 1, 4, 2);
+    
+    auto modWave = std::make_unique<AudioParameterInt>(MOD_WAVE_ID, MOD_WAVE_NAME, 1, 5, 1);
+    
+    auto modMultiple = std::make_unique<AudioParameterInt>(MOD_MULTIPLE_ID, MOD_MULTIPLE_NAME, -9, 5, 2);
+    
+    auto modDetune = std::make_unique<AudioParameterFloat>(MOD_DETUNE_ID,MOD_DETUNE_NAME,
+                                                      NormalisableRange<float>(-120.0f,120.0f,0.001f,0.3f,true),0.0f);
+    
+    auto modAmt = std::make_unique<AudioParameterFloat>(MOD_AMT_ID,MOD_AMT_NAME,
+                                                           NormalisableRange<float>(0.0f,1000.0f,0.01f,0.6f,true),20.0f);
+    
+    auto modWave_1 = std::make_unique<AudioParameterInt>(MOD_WAVE_1_ID, MOD_WAVE_1_NAME, 1, 5, 1);
+    
+    auto modMultiple_1 = std::make_unique<AudioParameterInt>(MOD_MULTIPLE_1_ID, MOD_MULTIPLE_1_NAME, -9, 5, 0);
+    
+    auto modDetune_1 = std::make_unique<AudioParameterFloat>(MOD_DETUNE_1_ID,MOD_DETUNE_1_NAME,
+                                                         NormalisableRange<float>(-120.0f,120.0f,0.001f,0.3f,true),0.0f);
+    
+    auto modAmt_1 = std::make_unique<AudioParameterFloat>(MOD_AMT_1_ID,MOD_AMT_1_NAME,
+                                                              NormalisableRange<float>(0.0f,1000.0f,0.01f,0.6f,true),20.0f);
+        
+    auto attack = std::make_unique<AudioParameterFloat>(ATTACK_ID,ATTACK_NAME,
+                                                        NormalisableRange<float>(0.001f,10.0f,0.001f,0.3f),0.01f);
+    
+    auto decay = std::make_unique<AudioParameterFloat>(DECAY_ID,DECAY_NAME,
+                                                       NormalisableRange<float>(0.001f,5.0f,0.001f,0.3f),0.01f);
+    
+    auto sustain = std::make_unique<AudioParameterFloat>(SUSTAIN_ID,SUSTAIN_NAME,
+                                                         NormalisableRange<float>(0.0f,1.5f,0.01f,0.9f),1.0f);
+    
+    auto release = std::make_unique<AudioParameterFloat>(RELEASE_ID,RELEASE_NAME,
+                                                         NormalisableRange<float>(0.001f,10.0f,0.001f,0.3f),0.01f);
+    
+    params.push_back(std::move(gain));
+    params.push_back(std::move(cutoff));
+    params.push_back(std::move(resonance));
+    params.push_back(std::move(filterSelectType));
+    params.push_back(std::move(carrierWave));
+    params.push_back(std::move(carrierOctave));
+    params.push_back(std::move(modWave));
+    params.push_back(std::move(modMultiple));
+    params.push_back(std::move(modDetune));
+    params.push_back(std::move(modAmt));
+    params.push_back(std::move(modWave_1));
+    params.push_back(std::move(modMultiple_1));
+    params.push_back(std::move(modDetune_1));
+    params.push_back(std::move(modAmt_1));
+  
+    params.push_back(std::move(attack));
+    params.push_back(std::move(decay));
+    params.push_back(std::move(sustain));
+    params.push_back(std::move(release));
+
+    return {params.begin(), params.end()};
+}
+
+
 const String FmSynthAudioProcessor::getName() const
 {
     return JucePlugin_Name;
@@ -108,8 +178,14 @@ void FmSynthAudioProcessor::changeProgramName(int index, const String& newName)
 //==============================================================================
 void FmSynthAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    this->sampleRate = sampleRate;
-    synth.prepareToPlay(sampleRate);
+    synth.prepareToPlay(sampleRate, samplesPerBlock);
+    /**
+     Clear Voice and Sound Buffer for polySynth instance.
+     */
+    synth.clearVoices();
+    synth.clearSounds();
+
+    synth.addVoice<FMVoice, FMSound>(12, &valTreeState);
 }
 
 void FmSynthAudioProcessor::releaseResources()
@@ -142,7 +218,7 @@ bool FmSynthAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) c
 
 void FmSynthAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages)
 {
-
+    
     buffer.clear();
 
     ScopedNoDenormals noDenormals;
@@ -152,26 +228,45 @@ void FmSynthAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer&
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; i++)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    // WIP, NOT GENERAL ENOUGH -- Will be used to pass parameters to PolySynth.
-    for (auto i = 0; i < synth.getNumVoices(); i++)
-    {
-        if ((tempVoice = dynamic_cast<SineVoice*>(synth.getVoice(i))))
-        {
-        }
-    }
-
     /**
         Render poly synth. NOTE does not support parameter changes of anything but pitch... YET
      */
     synth.renderNextAudioBlock(buffer, 0, buffer.getNumSamples(), midiMessages);
 
-    filterL.setCoefficients(IIRCoefficients::makeLowPass(getSampleRate(), filterCutoff));
-    filterR.setCoefficients(IIRCoefficients::makeLowPass(getSampleRate(), filterCutoff));
+    filterCutoff = *valTreeState.getRawParameterValue(FILTER_CUTOFF_ID);
+    filterType = *valTreeState.getRawParameterValue(FILTER_TYPE_ID);
+    res = *valTreeState.getRawParameterValue(FILTER_RES_ID);
+    if (filterType == 1) {
+        filterL.setCoefficients(IIRCoefficients::makeLowPass(getSampleRate(), filterCutoff, res));
+        filterR.setCoefficients(IIRCoefficients::makeLowPass(getSampleRate(), filterCutoff, res));
+    }
+    else if (filterType == 2){
+        filterL.setCoefficients(IIRCoefficients::makeHighPass(getSampleRate(), filterCutoff, res));
+        filterR.setCoefficients(IIRCoefficients::makeHighPass(getSampleRate(), filterCutoff, res));
+    }
+    else if (filterType == 3) {
+        filterL.setCoefficients(IIRCoefficients::makeBandPass(getSampleRate(), filterCutoff, res));
+        filterR.setCoefficients(IIRCoefficients::makeBandPass(getSampleRate(), filterCutoff, res));
+    }
+    else if (filterType == 4){
+        filterL.setCoefficients(IIRCoefficients::makeNotchFilter(getSampleRate(), filterCutoff, res));
+        filterR.setCoefficients(IIRCoefficients::makeNotchFilter(getSampleRate(), filterCutoff, res));
+    }
+    else if (filterType == 5) {
+        filterL.setCoefficients(IIRCoefficients::makeAllPass(getSampleRate(), filterCutoff, res));
+        filterR.setCoefficients(IIRCoefficients::makeAllPass(getSampleRate(), filterCutoff, res));
+    }
     filterL.processSamples(buffer.getWritePointer(0, 0), buffer.getNumSamples());
     filterR.processSamples(buffer.getWritePointer(1, 0), buffer.getNumSamples());
+    
+    filterBrickWallL.setCoefficients((IIRCoefficients::makeHighPass(getSampleRate(), 27.0, 1.0)));
+    filterBrickWallR.setCoefficients((IIRCoefficients::makeHighPass(getSampleRate(), 27.0, 1.0)));
+    filterBrickWallL.processSamples(buffer.getWritePointer(0, 0), buffer.getNumSamples());
+    filterBrickWallR.processSamples(buffer.getWritePointer(1, 0), buffer.getNumSamples());
 
     //gain rescales the volume setting to be from 0 to 1
-    gain = (noteOnVel) / 1000.0;
+    gain = *valTreeState.getRawParameterValue(GAIN_ID);
+
     //loop through every channel and then each buffer to adjust the volume
     for (auto channel = 0; channel < buffer.getNumChannels(); channel++) {
         auto* channelBuffer = buffer.getWritePointer(channel);
@@ -190,21 +285,24 @@ bool FmSynthAudioProcessor::hasEditor() const
 
 AudioProcessorEditor* FmSynthAudioProcessor::createEditor()
 {
-    return new FmSynthAudioProcessorEditor(*this);
+    return new FmSynthAudioProcessorEditor(*this, valTreeState);
 }
 
 //==============================================================================
 void FmSynthAudioProcessor::getStateInformation(MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    std::unique_ptr<XmlElement> xml(valTreeState.state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
 void FmSynthAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<XmlElement> params(getXmlFromBinary(data, sizeInBytes));
+    if(params != nullptr) {
+        if(params ->hasTagName(valTreeState.state.getType())) {
+            valTreeState.state = ValueTree::fromXml(*params);
+        }
+    }
 }
 
 //==============================================================================

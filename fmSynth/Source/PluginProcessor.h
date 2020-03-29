@@ -11,10 +11,9 @@
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
-#include "SineOsc.h"
-#include "SquareOsc.h"
-#include "SawOsc.h"
 #include "PolySynth.h"
+#include "FMOsc.h"
+#include "utilities.h"
 
 //==============================================================================
 /**
@@ -22,13 +21,6 @@
 class FmSynthAudioProcessor  : public AudioProcessor
 {
 public:
-    //================Variables====================================================
-    float gain;
-    float noteOnVel;
-    float minVolume, maxVolume;
-    double filterCutoff;
-    int currCarWave;
-    int currModWave;
     //==============================================================================
     FmSynthAudioProcessor();
     ~FmSynthAudioProcessor();
@@ -69,11 +61,18 @@ public:
     PolySynth synth;
 private:
     //==============================================================================
-    IIRFilter filterL, filterR; // filters stateful, so each channel needs its own
-    double sampleRate;
-    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FmSynthAudioProcessor)
+    
+    float gain;
+    double filterCutoff;
+    double res;
+    int filterType;
+
     Random random;
     MidiKeyboardState keyboardState;
-    SineVoice* tempVoice;
+    OscillatorVoice* tempVoice;
+    IIRFilter filterL, filterR, filterBrickWallL, filterBrickWallR;
+    
+    AudioProcessorValueTreeState valTreeState;
+    AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 };
