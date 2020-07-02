@@ -74,3 +74,5 @@ Our **target audience** is any musician looking for a highly tweakable instrumen
 ## License
 
 See `LICENSE.txt`
+
+## Developed by Torrance Cui, Thomas Parker, Jack Kilgore, Kyle Gusdorf, Jackie Ma, and Kyle Stanfield
