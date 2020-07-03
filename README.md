@@ -25,7 +25,7 @@ Our **target audience** is any musician looking for a highly tweakable instrumen
 
 ### Installation Steps
 
-1. Clone repo: https://github.com/ucsb-cs48-w20/fmSynthesizer/
+1. Clone repo: https://github.com/torrancecui/FM-Synthesizer
 2. cd fmSynth/
 3. To configure the build files, run: python3 configure.py
 4. To compile the files in src/, run: python3 run.py
